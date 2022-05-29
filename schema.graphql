@@ -1,0 +1,13 @@
+type Wallet {
+    alias: String! @id
+    balance: Float!
+    ins: [P2P!] @hasInverse(field: "to")
+    outs: [P2P!] @hasInverse(field: "from")
+}
+
+type P2P {
+    id: ID!
+    from: Wallet!
+    to: Wallet!
+    amount: Float!
+}

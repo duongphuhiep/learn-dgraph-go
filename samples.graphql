@@ -1,0 +1,57 @@
+mutation Create2Wallets {
+  walletA: addWallet(input: {alias: "a", balance: 100}) {
+    numUids
+    wallet {
+      alias
+      balance
+    }
+  }
+  walletB: addWallet(input: {alias: "b", balance: 100}) {
+    numUids
+    wallet {
+      alias
+      balance
+    }
+  }
+}
+
+mutation CreateP2P($sender, ) {
+  addP2P(input: {from: {alias: "a"}, to: {alias: "b"}, amount: 3}) {
+    p2P {
+      id
+      from {
+        alias
+        balance
+      }
+      to {
+        alias
+        balance
+      }
+    }
+  }
+  sender: updateWallet(input: {filter: {alias: {eq: "a"}}, set: {balance: 97}}) {
+    wallet {
+      balance
+    }
+  }
+  receiver: updateWallet(input: {filter: {alias: {eq: "a"}}, set: {balance: 103}}) {
+    wallet {
+      balance
+    }
+  }
+}
+
+/****/
+fragment infoWalletBalance on Wallet {
+  alias
+  balance
+}
+query getBalances($walletA: String!, $walletB: String!) {
+  walletA: getWallet(alias: $walletA) {
+    ...infoWalletBalance
+  }
+  walletB: getWallet(alias: $walletB) {
+    ...infoWalletBalance
+  }
+}
+
