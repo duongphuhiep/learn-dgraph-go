@@ -2,7 +2,7 @@ This exercise helps me to explore
 * the dgraph database
 * the golang programing language
 
-I will simulate a Race condition on a Dgraph database and confirm that the ACID-transaction support of the database will protect the database consistency.  
+This program simulates a Race condition on a Dgraph database and confirm that the ACID-transaction support of the database will protect the database consistency.  
 
 2 go routines will try to increase the balance of the same wallet
 at the same time on 2 different transactions. Each go routines will

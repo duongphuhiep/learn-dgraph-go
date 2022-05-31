@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"github.com/dgraph-io/dgo/v210"
 	"github.com/dgraph-io/dgo/v210/protos/api"
+	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 	"log"
@@ -29,14 +30,16 @@ func main() {
 	go func() {
 		err := IncreaseBalance(1)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("Unable to IncreaseBalance 1. %v", err)
 		}
+		waitGroupWrite.Done()
 	}()
 	go func() {
 		err := IncreaseBalance(2)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("Unable to IncreaseBalance 2. %v", err)
 		}
+		waitGroupWrite.Done()
 	}()
 
 	waitGroupRead.Wait()
@@ -51,24 +54,25 @@ func loadConfig() error {
 	viper.AddConfigPath(".")
 	err := viper.ReadInConfig()
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Unable to get config")
 	}
 	dgraphCloudEndpoint = viper.GetString("dgraph.cloud_endpoint")
 	dgraphKey = viper.GetString("dgraph.key")
 	return nil
 }
 
-func IncreaseBalance(delta float64) error {
+func IncreaseBalance(delta float64) (returned error) {
 	cond.L.Lock()
+	defer cond.L.Unlock()
 
 	conn, err := dgo.DialCloud(dgraphCloudEndpoint, dgraphKey)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Unable to close grpc connection")
 	}
 	defer func(conn *grpc.ClientConn) {
 		err := conn.Close()
 		if err != nil {
-			log.Fatal(err)
+			returned = errors.Wrap(err, "Unable to close grpc connection")
 		}
 	}(conn)
 
@@ -76,15 +80,15 @@ func IncreaseBalance(delta float64) error {
 	client := dgo.NewDgraphClient(api.NewDgraphClient(conn))
 	tnx := client.NewTxn()
 	defer func(tnx *dgo.Txn, ctx context.Context) {
-		err := tnx.Discard(ctx)
+		err = tnx.Discard(ctx)
 		if err != nil {
-			log.Fatal(err)
+			returned = errors.Wrap(err, "Unable to discard tx")
 		}
 	}(tnx, ctx)
 
 	balance, err := getWalletBalance(tnx, ctx)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Unable to getWalletBalance")
 	}
 	log.Printf("Current balance is %f", balance)
 
@@ -94,17 +98,15 @@ func IncreaseBalance(delta float64) error {
 	newBalance := balance + delta
 	_, err = setWalletBalance(tnx, ctx, newBalance)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Unable to setWalletBalance")
 	}
 
 	err = tnx.Commit(ctx)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Unable to commit")
 	}
 	log.Printf("New balance is %f", newBalance)
 
-	cond.L.Unlock()
-	waitGroupWrite.Done()
 	return nil
 }
 
@@ -117,7 +119,7 @@ func setWalletBalance(tnx *dgo.Txn, ctx context.Context, newBalance float64) (*a
 	mu.Balance = newBalance
 	muBytes, err := json.Marshal(mu)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Unable to marshal request")
 	}
 
 	req := &api.Request{
@@ -147,7 +149,7 @@ func getWalletBalance(tnx *dgo.Txn, ctx context.Context) (float64, error) {
 		}`
 	rawResp, err := tnx.Query(ctx, queryString)
 	if err != nil {
-		return -1, err
+		return -1, errors.Wrapf(err, "Unable to query %v", queryString)
 	}
 
 	var resp struct {
@@ -158,7 +160,7 @@ func getWalletBalance(tnx *dgo.Txn, ctx context.Context) (float64, error) {
 	}
 
 	if err := json.Unmarshal(rawResp.GetJson(), &resp); err != nil {
-		return -1, err
+		return -1, errors.Wrapf(err, "Unable to query %v", queryString)
 	}
 
 	return resp.Q[0].Balance, nil
