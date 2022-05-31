@@ -67,7 +67,7 @@ func IncreaseBalance(delta float64) (returned error) {
 
 	conn, err := dgo.DialCloud(dgraphCloudEndpoint, dgraphKey)
 	if err != nil {
-		return errors.Wrap(err, "Unable to close grpc connection")
+		return errors.Wrap(err, "Unable to dial grpc connection")
 	}
 	defer func(conn *grpc.ClientConn) {
 		err := conn.Close()

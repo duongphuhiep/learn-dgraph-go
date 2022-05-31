@@ -2,7 +2,12 @@ This exercise helps me to explore
 * the dgraph database
 * the golang programing language
 
-This program simulates a Race condition on a Dgraph database and confirm that the ACID-transaction support of the database will protect the database consistency.  
+I simulated a Race condition on a Dgraph database and confirm that the ACID-transaction support of the database will protect the database consistency.
+
+
+# Scenario 1
+
+<main.go>
 
 2 go routines will try to increase the balance of the same wallet
 at the same time on 2 different transactions. Each go routines will
@@ -14,12 +19,28 @@ at the same time on 2 different transactions. Each go routines will
 4) update wallet balance
 5) commit the database's transaction
 ```
-
 Both go routine will wait for my signal after the step (2). So both goroutine will race to update the wallet balance.
+
+# Scenario 2
+
+<race_test.go>
+
+2 go routines will try to increase the balance of the same wallet
+at the same time on 2 different transactions. Each go routines will
+
+```
+1) create a new database's transaction 
+2) update wallet balance
+<wait for a signal>
+3) commit the database's transaction
+```
+oth go routine will wait for my signal after the step (2). So both goroutine will race to commit the update the wallet balance.
+
+# Result
 
 as expected! dgraph did not fall to this race condition
 * 1 go routine will pass (successfully update the wallet balance)
-* other will fail
+* other would fail
 
 # Understand the Data model
 
@@ -158,8 +179,8 @@ curl localhost:8080/mutate?commitNow=true -H 'Content-Type: application/json' -d
 * IMO we have to learn DQL
   * GraphQL support is just a plus, but not enough for me.
     * We can conveniently plug the Frontend application directly to the Dgraph database without passing through the Server application layer.
-    * However, this kind of applications are limited, We aim for more complex enterprise grade applications so, A application server is a requirement to execute Business Logic. 
-  * The SDK client connect to Dgraph via gRPC and use the DQL. We can also connect to Dgraph via HTTP and use the GraphQL but it is less efficient than the first options: 
+    * However, this kind of applications are limited, I aim for more complex enterprise grade applications so, A application server is a requirement to execute Business Logic. 
+  * The SDK client connect to Dgraph via gRPC and use the DQL. We can also connect to Dgraph via HTTP and use the GraphQL, but it is less efficient than the first option: 
     * gRPC is better than HTTP (for speed and memory)
     * DQL is more powerful than GraphQL
     * We can use the SDK (so DQL) to create new ACID Transaction
