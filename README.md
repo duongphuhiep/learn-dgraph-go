@@ -176,13 +176,29 @@ curl localhost:8080/mutate?commitNow=true -H 'Content-Type: application/json' -d
 * It makes me puzzle that Dgraph uses 2 different query language systems: 
   * GraphQL (standard-specs compliant, supplement with specific dgraph's directive) 
   * DQL (inspired from GraphQL)
-* IMO we have to learn DQL
-  * GraphQL support is just a plus, but not enough for me.
-    * We can conveniently plug the Frontend application directly to the Dgraph database without passing through the Server application layer.
-    * However, this kind of applications are limited, I aim for more complex enterprise grade applications so, A application server is a requirement to execute Business Logic. 
-  * The SDK client connect to Dgraph via gRPC and use the DQL. We can also connect to Dgraph via HTTP and use the GraphQL, but it is less efficient than the first option: 
-    * gRPC is better than HTTP (for speed and memory)
-    * DQL is more powerful than GraphQL
-    * We can use the SDK (so DQL) to create new ACID Transaction
+
+## GraphQL vs. DQL
+
+"GraphQL vs. DQL" could roughly equivalent to "Typescript vs. Javascript".
+
+* GraphQL is similar to a high level language, supporting static type check with schema.
+* DQL is schemaless and let you operate directly at the nodes and edges level.
+* It is possible to translate a GraphQL request to (multiple) DQL requests. The equivalent DQLs requests are more verbose (so less elegant)
+* If we manipulate the data directly with DQLs then there is no type checking, and our data might become incompatible with the pre-defined GraphQL schema.
+* The SDK client connect to Dgraph via gRPC and use DQL to manipulate data. So it is more efficient than manipulate data with GraphQL via HTTP
+
+IMO we should learn both GraphQL and DQL
+
+ * Most of time we should only use GraphQL via HTTP to manipulate data
+ * We only need to use DQL in case
+   * We need higher performance
+   * complex query+mutation in the same ACID transaction (if we are unable to do it in the same GraphQL request)
+   * data migration
+ * In case we have to make DQL mutation, then we should make sure that the data stay compatible with the GraphQL schema
+ 
+  
+
+
+  
 
 
